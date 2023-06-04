@@ -46,22 +46,19 @@ class SE3Propagator {
     void SetPose(const SE3 pose_in) { pose = pose_in; }
 
     // Update ego position global (world)
-    std::pair<SE3, Vec3d> _propagte_pos(const SE3 pose_in, const Vec3d v_body,
+    std::pair<SE3, Vec3d> _propagte_pos(SE3 pose, const Vec3d v_body,
                                         const double dt) const {
-        SE3 pose{pose_in};
         Vec3d v_world = pose.so3() * v_body;
         pose.translation() += v_world * dt;
         return {pose, v_world};
     }
 
     // Update ego orientation global (world)
-    SE3 _propagte_rot(const SE3 pose_in, const Vec3d omega,
-                      const double dt) const {
+    SE3 _propagte_rot(SE3 pose, const Vec3d omega, const double dt) const {
         auto dq = [](const Vec3d wt) {
             return Quatd(1.0, 0.5 * wt[0], 0.5 * wt[1], 0.5 * wt[2]);
         };
 
-        SE3 pose{pose_in};
         if (use_quaternion) {
             // updated on the quat space
             const auto& q_world_current = pose.unit_quaternion();
