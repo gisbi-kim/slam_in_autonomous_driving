@@ -10,37 +10,41 @@
 namespace sad {
 
 /**
- * 计算本书的GNSS读数对应的UTM pose和六自由度Pose
- * @param gnss_reading  输入gnss读数
- * @param antenna_pos   安装位置
- * @param antenna_angle 安装偏角
- * @param map_origin    地图原点，指定时，将从UTM位置中减掉坐标原点
- * @return
+ * Calculate UTM pose and 6-DOF pose corresponding to GNSS readings in this
+ * book.
+ * @param gnss_reading Input GNSS reading
+ * @param antenna_pos Installation position
+ * @param antenna_angle Installation angle
+ * @param map_origin Map origin. If specified, subtract the origin coordinates
+ * from the UTM position.
+ * @return True if successful, False otherwise
  */
-bool ConvertGps2UTM(GNSS& gnss_reading, const Vec2d& antenna_pos, const double& antenna_angle,
+bool ConvertGps2UTM(GNSS& gnss_reading, const Vec2d& antenna_pos,
+                    const double& antenna_angle,
                     const Vec3d& map_origin = Vec3d::Zero());
 
 /**
- * 仅转换平移部分的经纬度，不作外参和角度处理
+ * Convert only the translation part of the latitude and longitude without
+ * extrinsic parameters and angle processing.
  * @param gnss_reading
- * @return
+ * @return True if successful, False otherwise
  */
 bool ConvertGps2UTMOnlyTrans(GNSS& gnss_reading);
 
 /**
- * 经纬度转UTM
- * NOTE 经纬度单位为度数
+ * Convert latitude and longitude to UTM.
+ * NOTE: The latitude and longitude units are in degrees.
  * @param latlon
  * @param utm_coor
- * @return
+ * @return True if successful, False otherwise
  */
 bool LatLon2UTM(const Vec2d& latlon, UTMCoordinate& utm_coor);
 
 /**
- * UTM转经纬度
+ * Convert UTM coordinates to latitude and longitude.
  * @param utm_coor
  * @param latlon
- * @return
+ * @return True if successful, False otherwise
  */
 bool UTM2LatLon(const UTMCoordinate& utm_coor, Vec2d& latlon);
 

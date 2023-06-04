@@ -16,7 +16,7 @@
 /**
  * 运行由预积分构成的GINS系统
  */
-DEFINE_string(txt_path, "./data/ch3/10.txt", "数据文件路径");
+DEFINE_string(txt_path, "../data/ch3/10.txt", "数据文件路径");
 DEFINE_double(antenna_angle, 12.06, "RTK天线安装偏角（角度）");
 DEFINE_double(antenna_pox_x, -0.17, "RTK天线安装偏移X");
 DEFINE_double(antenna_pox_y, -0.20, "RTK天线安装偏移Y");
@@ -39,13 +39,18 @@ int main(int argc, char** argv) {
     sad::TxtIO io(fLS::FLAGS_txt_path);
     Vec2d antenna_pos(fLD::FLAGS_antenna_pox_x, fLD::FLAGS_antenna_pox_y);
 
-    auto save_vec3 = [](std::ofstream& fout, const Vec3d& v) { fout << v[0] << " " << v[1] << " " << v[2] << " "; };
+    auto save_vec3 = [](std::ofstream& fout, const Vec3d& v) {
+        fout << v[0] << " " << v[1] << " " << v[2] << " ";
+    };
     auto save_quat = [](std::ofstream& fout, const Quatd& q) {
         fout << q.w() << " " << q.x() << " " << q.y() << " " << q.z() << " ";
     };
 
-    auto save_result = [&save_vec3, &save_quat](std::ofstream& fout, const sad::NavStated& save_state) {
-        fout << std::setprecision(18) << save_state.timestamp_ << " " << std::setprecision(9);
+    auto save_result = [&save_vec3, &save_quat](
+                           std::ofstream& fout,
+                           const sad::NavStated& save_state) {
+        fout << std::setprecision(18) << save_state.timestamp_ << " "
+             << std::setprecision(9);
         save_vec3(fout, save_state.p_);
         save_quat(fout, save_state.R_.unit_quaternion());
         save_vec3(fout, save_state.v_);
@@ -54,7 +59,7 @@ int main(int argc, char** argv) {
         fout << std::endl;
     };
 
-    std::ofstream fout("./data/ch4/gins_preintg.txt");
+    std::ofstream fout("../data/ch4/gins_preintg.txt");
     bool imu_inited = false, gnss_inited = false;
 
     sad::GinsPreInteg::Options gins_options;
@@ -112,7 +117,9 @@ int main(int argc, char** argv) {
             }
 
             sad::GNSS gnss_convert = gnss;
-            if (!sad::ConvertGps2UTM(gnss_convert, antenna_pos, FLAGS_antenna_angle) || !gnss_convert.heading_valid_) {
+            if (!sad::ConvertGps2UTM(gnss_convert, antenna_pos,
+                                     FLAGS_antenna_angle) ||
+                !gnss_convert.heading_valid_) {
                 return;
             }
 

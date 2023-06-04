@@ -1,3 +1,8 @@
+## This is a Forked version to
+- Refactor the code using C++17/20.
+- Translate the comments into English.
+- Test on my own Ubuntu 20.04 machine.
+
 ## SLAM in Autonomous Driving book (SAD book)
 
 This book systematically introduces inertial navigation, integrated navigation, laser mapping, laser positioning, laser inertial odometer and other knowledge to readers. This warehouse is the source code warehouse corresponding to the book and can be used publicly.

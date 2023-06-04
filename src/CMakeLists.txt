@@ -2,7 +2,7 @@ add_subdirectory(common)
 add_subdirectory(tools)
 
 add_subdirectory(ch2)
-#add_subdirectory(ch3)
+add_subdirectory(ch3)
 # add_subdirectory(ch4)
 # add_subdirectory(ch5)
 # add_subdirectory(ch6)

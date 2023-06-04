@@ -12,7 +12,8 @@ namespace sad {
 Fusion::Fusion(const std::string& config_yaml) {
     config_yaml_ = config_yaml;
     StaticIMUInit::Options imu_init_options;
-    imu_init_options.use_speed_for_static_checking_ = false;  // 本节数据不需要轮速计
+    imu_init_options.use_speed_for_static_checking_ =
+        false;  // 本节数据不需要轮速计
     imu_init_ = StaticIMUInit(imu_init_options);
     ndt_.setResolution(1.0);
 }
@@ -28,12 +29,15 @@ bool Fusion::Init() {
     LoadMapIndex();
 
     // lidar和IMU消息同步
-    sync_ = std::make_shared<MessageSync>([this](const MeasureGroup& m) { ProcessMeasurements(m); });
+    sync_ = std::make_shared<MessageSync>(
+        [this](const MeasureGroup& m) { ProcessMeasurements(m); });
     sync_->Init(config_yaml_);
 
     // lidar和IMU外参
-    std::vector<double> ext_t = yaml["mapping"]["extrinsic_T"].as<std::vector<double>>();
-    std::vector<double> ext_r = yaml["mapping"]["extrinsic_R"].as<std::vector<double>>();
+    std::vector<double> ext_t =
+        yaml["mapping"]["extrinsic_T"].as<std::vector<double>>();
+    std::vector<double> ext_r =
+        yaml["mapping"]["extrinsic_R"].as<std::vector<double>>();
     Vec3d lidar_T_wrt_IMU = math::VecFromArray(ext_t);
     Mat3d lidar_R_wrt_IMU = math::MatFromArray(ext_r);
     TIL_ = SE3(lidar_R_wrt_IMU, lidar_T_wrt_IMU);
@@ -76,13 +80,15 @@ void Fusion::TryInitIMU() {
 
     if (imu_init_.InitSuccess()) {
         // 读取初始零偏，设置ESKF
-        sad::ESKFD::Options options;
+        sad::ESKFOptions options;
         // 噪声由初始化器估计
         // options.gyro_var_ = sqrt(imu_init_.GetCovGyro()[0]);
         // options.acce_var_ = sqrt(imu_init_.GetCovAcce()[0]);
         options.update_bias_acce_ = false;
         options.update_bias_gyro_ = false;
-        eskf_.SetInitialConditions(options, imu_init_.GetInitBg(), imu_init_.GetInitBa(), imu_init_.GetGravity());
+        eskf_.SetInitialConditions(options, imu_init_.GetInitBg(),
+                                   imu_init_.GetInitBa(),
+                                   imu_init_.GetGravity());
         imu_need_init_ = false;
 
         LOG(INFO) << "IMU初始化成功";
@@ -106,28 +112,33 @@ void Fusion::Undistort() {
     SE3 T_end = SE3(imu_state.R_, imu_state.p_);
 
     /// 将所有点转到最后时刻状态上
-    std::for_each(std::execution::par_unseq, cloud->points.begin(), cloud->points.end(), [&](auto& pt) {
-        SE3 Ti = T_end;
-        NavStated match;
+    std::for_each(
+        std::execution::par_unseq, cloud->points.begin(), cloud->points.end(),
+        [&](auto& pt) {
+            SE3 Ti = T_end;
+            NavStated match;
 
-        // 根据pt.time查找时间，pt.time是该点打到的时间与雷达开始时间之差，单位为毫秒
-        math::PoseInterp<NavStated>(
-            measures_.lidar_begin_time_ + pt.time * 1e-3, imu_states_, [](const NavStated& s) { return s.timestamp_; },
-            [](const NavStated& s) { return s.GetSE3(); }, Ti, match);
+            // 根据pt.time查找时间，pt.time是该点打到的时间与雷达开始时间之差，单位为毫秒
+            math::PoseInterp<NavStated>(
+                measures_.lidar_begin_time_ + pt.time * 1e-3, imu_states_,
+                [](const NavStated& s) { return s.timestamp_; },
+                [](const NavStated& s) { return s.GetSE3(); }, Ti, match);
 
-        Vec3d pi = ToVec3d(pt);
-        Vec3d p_compensate = TIL_.inverse() * T_end.inverse() * Ti * TIL_ * pi;
+            Vec3d pi = ToVec3d(pt);
+            Vec3d p_compensate =
+                TIL_.inverse() * T_end.inverse() * Ti * TIL_ * pi;
 
-        pt.x = p_compensate(0);
-        pt.y = p_compensate(1);
-        pt.z = p_compensate(2);
-    });
+            pt.x = p_compensate(0);
+            pt.y = p_compensate(1);
+            pt.z = p_compensate(2);
+        });
     scan_undistort_ = cloud;
 }
 
 void Fusion::Align() {
     FullCloudPtr scan_undistort_trans(new FullPointCloudType);
-    pcl::transformPointCloud(*scan_undistort_, *scan_undistort_trans, TIL_.matrix());
+    pcl::transformPointCloud(*scan_undistort_, *scan_undistort_trans,
+                             TIL_.matrix());
     scan_undistort_ = scan_undistort_trans;
     current_scan_ = ConvertToCloud<FullPointType>(scan_undistort_);
     current_scan_ = VoxelCloud(current_scan_, 0.5);
@@ -150,7 +161,9 @@ void Fusion::Align() {
 
 bool Fusion::SearchRTK() {
     if (init_has_failed_) {
-        if ((last_gnss_->utm_pose_.translation() - last_searched_pos_.translation()).norm() < 20.0) {
+        if ((last_gnss_->utm_pose_.translation() -
+             last_searched_pos_.translation())
+                .norm() < 20.0) {
             LOG(INFO) << "skip this position";
             return false;
         }
@@ -163,22 +176,27 @@ bool Fusion::SearchRTK() {
     /// 由于RTK不带角度，这里按固定步长扫描RTK角度
     double grid_ang_range = 360.0, grid_ang_step = 10;  // 角度搜索范围与步长
     for (double ang = 0; ang < grid_ang_range; ang += grid_ang_step) {
-        SE3 pose(SO3::rotZ(ang * math::kDEG2RAD), Vec3d(0, 0, 0) + last_gnss_->utm_pose_.translation());
+        SE3 pose(SO3::rotZ(ang * math::kDEG2RAD),
+                 Vec3d(0, 0, 0) + last_gnss_->utm_pose_.translation());
         GridSearchResult gr;
         gr.pose_ = pose;
         search_poses.emplace_back(gr);
     }
 
     LOG(INFO) << "grid search poses: " << search_poses.size();
-    std::for_each(std::execution::par_unseq, search_poses.begin(), search_poses.end(),
+    std::for_each(std::execution::par_unseq, search_poses.begin(),
+                  search_poses.end(),
                   [this](GridSearchResult& gr) { AlignForGrid(gr); });
 
     // 选择最优的匹配结果
-    auto max_ele = std::max_element(search_poses.begin(), search_poses.end(),
-                                    [](const auto& g1, const auto& g2) { return g1.score_ < g2.score_; });
-    LOG(INFO) << "max score: " << max_ele->score_ << ", pose: \n" << max_ele->result_pose_.matrix();
+    auto max_ele = std::max_element(
+        search_poses.begin(), search_poses.end(),
+        [](const auto& g1, const auto& g2) { return g1.score_ < g2.score_; });
+    LOG(INFO) << "max score: " << max_ele->score_ << ", pose: \n"
+              << max_ele->result_pose_.matrix();
     if (max_ele->score_ > rtk_search_min_score_) {
-        LOG(INFO) << "初始化成功, score: " << max_ele->score_ << ">" << rtk_search_min_score_;
+        LOG(INFO) << "初始化成功, score: " << max_ele->score_ << ">"
+                  << rtk_search_min_score_;
         status_ = Status::WORKING;
 
         /// 重置滤波器状态
@@ -190,7 +208,8 @@ bool Fusion::SearchRTK() {
 
         ESKFD::Mat18T cov;
         cov = ESKFD::Mat18T::Identity() * 1e-4;
-        cov.block<12, 12>(6, 6) = Eigen::Matrix<double, 12, 12>::Identity() * 1e-6;
+        cov.block<12, 12>(6, 6) =
+            Eigen::Matrix<double, 12, 12>::Identity() * 1e-6;
         eskf_.SetCov(cov);
 
         return true;
@@ -249,8 +268,9 @@ void Fusion::LoadMap(const SE3& pose) {
 
     // 一个区域的周边地图，我们认为9个就够了
     std::set<Vec2i, less_vec<2>> surrounding_index{
-        key + Vec2i(0, 0), key + Vec2i(-1, 0), key + Vec2i(-1, -1), key + Vec2i(-1, 1), key + Vec2i(0, -1),
-        key + Vec2i(0, 1), key + Vec2i(1, 0),  key + Vec2i(1, -1),  key + Vec2i(1, 1),
+        key + Vec2i(0, 0),  key + Vec2i(-1, 0), key + Vec2i(-1, -1),
+        key + Vec2i(-1, 1), key + Vec2i(0, -1), key + Vec2i(0, 1),
+        key + Vec2i(1, 0),  key + Vec2i(1, -1), key + Vec2i(1, 1),
     };
 
     // 加载必要区域
@@ -265,7 +285,9 @@ void Fusion::LoadMap(const SE3& pose) {
         if (map_data_.find(k) == map_data_.end()) {
             // 加载这个区块
             CloudPtr cloud(new PointCloudType);
-            pcl::io::loadPCDFile(data_path_ + std::to_string(k[0]) + "_" + std::to_string(k[1]) + ".pcd", *cloud);
+            pcl::io::loadPCDFile(data_path_ + std::to_string(k[0]) + "_" +
+                                     std::to_string(k[1]) + ".pcd",
+                                 *cloud);
             map_data_.emplace(k, cloud);
             map_data_changed = true;
             cnt_new_loaded++;
@@ -311,6 +333,8 @@ void Fusion::LoadMapIndex() {
 
 void Fusion::ProcessIMU(IMUPtr imu) { sync_->ProcessIMU(imu); }
 
-void Fusion::ProcessPointCloud(sensor_msgs::PointCloud2::Ptr cloud) { sync_->ProcessCloud(cloud); }
+void Fusion::ProcessPointCloud(sensor_msgs::PointCloud2::Ptr cloud) {
+    sync_->ProcessCloud(cloud);
+}
 
 }  // namespace sad

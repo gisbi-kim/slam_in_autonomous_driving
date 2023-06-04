@@ -35,8 +35,10 @@ void GinsPreInteg::SetOptions(sad::GinsPreInteg::Options options) {
     double gh2 = options_.gnss_height_noise_ * options_.gnss_height_noise_;
     double ga2 = options_.gnss_ang_noise_ * options_.gnss_ang_noise_;
 
-    options_.gnss_info_.diagonal() << 1.0 / ga2, 1.0 / ga2, 1.0 / ga2, 1.0 / gp2, 1.0 / gp2, 1.0 / gh2;
-    pre_integ_ = std::make_shared<IMUPreintegration>(options_.preinteg_options_);
+    options_.gnss_info_.diagonal() << 1.0 / ga2, 1.0 / ga2, 1.0 / ga2,
+        1.0 / gp2, 1.0 / gp2, 1.0 / gh2;
+    pre_integ_ =
+        std::make_shared<IMUPreintegration>(options_.preinteg_options_);
 
     double o2 = 1.0 / (options_.odom_var_ * options_.odom_var_);
     options_.odom_info_.diagonal() << o2, o2, o2;
@@ -67,7 +69,8 @@ void GinsPreInteg::AddGnss(const GNSS& gnss) {
         this_frame_->bg_ = options_.preinteg_options_.init_bg_;
         this_frame_->ba_ = options_.preinteg_options_.init_ba_;
 
-        pre_integ_ = std::make_shared<IMUPreintegration>(options_.preinteg_options_);
+        pre_integ_ =
+            std::make_shared<IMUPreintegration>(options_.preinteg_options_);
 
         last_frame_ = this_frame_;
         last_gnss_ = this_gnss_;
@@ -100,10 +103,12 @@ void GinsPreInteg::Optimize() {
     }
 
     using BlockSolverType = g2o::BlockSolverX;
-    using LinearSolverType = g2o::LinearSolverEigen<BlockSolverType::PoseMatrixType>;
+    using LinearSolverType =
+        g2o::LinearSolverEigen<BlockSolverType::PoseMatrixType>;
 
     auto* solver = new g2o::OptimizationAlgorithmLevenberg(
-        g2o::make_unique<BlockSolverType>(g2o::make_unique<LinearSolverType>()));
+        g2o::make_unique<BlockSolverType>(
+            g2o::make_unique<LinearSolverType>()));
     g2o::SparseOptimizer optimizer;
     optimizer.setAlgorithm(solver);
 
@@ -198,10 +203,10 @@ void GinsPreInteg::Optimize() {
     Vec3d vel_odom = Vec3d::Zero();
     if (last_odom_set_) {
         // velocity obs
-        double velo_l =
-            options_.wheel_radius_ * last_odom_.left_pulse_ / options_.circle_pulse_ * 2 * M_PI / options_.odom_span_;
-        double velo_r =
-            options_.wheel_radius_ * last_odom_.right_pulse_ / options_.circle_pulse_ * 2 * M_PI / options_.odom_span_;
+        double velo_l = options_.wheel_radius_ * last_odom_.left_pulse_ /
+                        options_.circle_pulse_ * 2 * M_PI / options_.odom_span_;
+        double velo_r = options_.wheel_radius_ * last_odom_.right_pulse_ /
+                        options_.circle_pulse_ * 2 * M_PI / options_.odom_span_;
         double average_vel = 0.5 * (velo_l + velo_r);
         vel_odom = Vec3d(average_vel, 0.0, 0.0);
         vel_world = this_frame_->R_ * vel_odom;
@@ -221,15 +226,24 @@ void GinsPreInteg::Optimize() {
     if (options_.verbose_) {
         // 获取结果，统计各类误差
         LOG(INFO) << "chi2/error: ";
-        LOG(INFO) << "preintegration: " << edge_inertial->chi2() << "/" << edge_inertial->error().transpose();
-        // LOG(INFO) << "gnss0: " << edge_gnss0->chi2() << ", " << edge_gnss0->error().transpose();
-        LOG(INFO) << "gnss1: " << edge_gnss1->chi2() << ", " << edge_gnss1->error().transpose();
-        LOG(INFO) << "bias: " << edge_gyro_rw->chi2() << "/" << edge_acc_rw->error().transpose();
-        LOG(INFO) << "prior: " << edge_prior->chi2() << "/" << edge_prior->error().transpose();
+        LOG(INFO) << "preintegration: " << edge_inertial->chi2() << "/"
+                  << edge_inertial->error().transpose();
+        // LOG(INFO) << "gnss0: " << edge_gnss0->chi2() << ", " <<
+        // edge_gnss0->error().transpose();
+        LOG(INFO) << "gnss1: " << edge_gnss1->chi2() << ", "
+                  << edge_gnss1->error().transpose();
+        LOG(INFO) << "bias: " << edge_gyro_rw->chi2() << "/"
+                  << edge_acc_rw->error().transpose();
+        LOG(INFO) << "prior: " << edge_prior->chi2() << "/"
+                  << edge_prior->error().transpose();
         if (edge_odom) {
-            LOG(INFO) << "body vel: " << (v1_pose->estimate().so3().inverse() * v1_vel->estimate()).transpose();
+            LOG(INFO) << "body vel: "
+                      << (v1_pose->estimate().so3().inverse() *
+                          v1_vel->estimate())
+                             .transpose();
             LOG(INFO) << "meas: " << vel_odom.transpose();
-            LOG(INFO) << "odom: " << edge_odom->chi2() << "/" << edge_odom->error().transpose();
+            LOG(INFO) << "odom: " << edge_odom->chi2() << "/"
+                      << edge_odom->error().transpose();
         }
     }
 
@@ -248,7 +262,8 @@ void GinsPreInteg::Optimize() {
     // 重置integ
     options_.preinteg_options_.init_bg_ = this_frame_->bg_;
     options_.preinteg_options_.init_ba_ = this_frame_->ba_;
-    pre_integ_ = std::make_shared<IMUPreintegration>(options_.preinteg_options_);
+    pre_integ_ =
+        std::make_shared<IMUPreintegration>(options_.preinteg_options_);
 }
 
 NavStated GinsPreInteg::GetState() const {

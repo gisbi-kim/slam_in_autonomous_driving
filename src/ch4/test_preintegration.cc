@@ -8,8 +8,8 @@
 
 #include "ch3/eskf.hpp"
 #include "ch3/static_imu_init.h"
-#include "ch4/imu_preintegration.h"
 #include "ch4/g2o_types.h"
+#include "ch4/imu_preintegration.h"
 #include "common/g2o_types.h"
 #include "common/io_utils.h"
 
@@ -19,7 +19,7 @@
 #include <g2o/core/robust_kernel.h>
 #include <g2o/solvers/eigen/linear_solver_eigen.h>
 
-DEFINE_string(txt_path, "./data/ch3/10.txt", "数据文件路径");
+DEFINE_string(txt_path, "../data/ch3/10.txt", "数据文件路径");
 DEFINE_double(antenna_angle, 12.06, "RTK天线安装偏角（角度）");
 DEFINE_double(antenna_pox_x, -0.17, "RTK天线安装偏移X");
 DEFINE_double(antenna_pox_y, -0.20, "RTK天线安装偏移Y");
@@ -27,9 +27,9 @@ DEFINE_bool(with_ui, true, "是否显示图形界面");
 
 TEST(PREINTEGRATION_TEST, ROTATION_TEST) {
     // 测试在恒定角速度运转下的预积分情况
-    double imu_time_span = 0.01;       // IMU测量间隔
+    double imu_time_span = 0.01;  // IMU测量间隔
     Vec3d constant_omega(0, 0, M_PI);  // 角速度为180度/s，转1秒应该等于转180度
-    Vec3d gravity(0, 0, -9.8);         // Z 向上，重力方向为负
+    Vec3d gravity(0, 0, -9.8);  // Z 向上，重力方向为负
 
     sad::NavStated start_status(0), end_status(1.0);
     sad::IMUPreintegration pre_integ;
@@ -42,11 +42,13 @@ TEST(PREINTEGRATION_TEST, ROTATION_TEST) {
     for (int i = 1; i <= 100; ++i) {
         double time = imu_time_span * i;
         Vec3d acce = -gravity;  // 加速度计应该测量到一个向上的力
-        pre_integ.Integrate(sad::IMU(time, constant_omega, acce), imu_time_span);
+        pre_integ.Integrate(sad::IMU(time, constant_omega, acce),
+                            imu_time_span);
 
         sad::NavStated this_status = pre_integ.Predict(start_status, gravity);
 
-        t = t + v * imu_time_span + 0.5 * gravity * imu_time_span * imu_time_span +
+        t = t + v * imu_time_span +
+            0.5 * gravity * imu_time_span * imu_time_span +
             0.5 * (R * acce) * imu_time_span * imu_time_span;
         v = v + gravity * imu_time_span + (R * acce) * imu_time_span;
         R = R * Sophus::SO3d::exp(constant_omega * imu_time_span);
@@ -60,10 +62,14 @@ TEST(PREINTEGRATION_TEST, ROTATION_TEST) {
         EXPECT_NEAR(v[1], this_status.v_[1], 1e-2);
         EXPECT_NEAR(v[2], this_status.v_[2], 1e-2);
 
-        EXPECT_NEAR(R.unit_quaternion().x(), this_status.R_.unit_quaternion().x(), 1e-4);
-        EXPECT_NEAR(R.unit_quaternion().y(), this_status.R_.unit_quaternion().y(), 1e-4);
-        EXPECT_NEAR(R.unit_quaternion().z(), this_status.R_.unit_quaternion().z(), 1e-4);
-        EXPECT_NEAR(R.unit_quaternion().w(), this_status.R_.unit_quaternion().w(), 1e-4);
+        EXPECT_NEAR(R.unit_quaternion().x(),
+                    this_status.R_.unit_quaternion().x(), 1e-4);
+        EXPECT_NEAR(R.unit_quaternion().y(),
+                    this_status.R_.unit_quaternion().y(), 1e-4);
+        EXPECT_NEAR(R.unit_quaternion().z(),
+                    this_status.R_.unit_quaternion().z(), 1e-4);
+        EXPECT_NEAR(R.unit_quaternion().w(),
+                    this_status.R_.unit_quaternion().w(), 1e-4);
     }
 
     end_status = pre_integ.Predict(start_status);
@@ -100,7 +106,8 @@ TEST(PREINTEGRATION_TEST, ACCELERATION_TEST) {
         pre_integ.Integrate(sad::IMU(time, Vec3d::Zero(), acce), imu_time_span);
         sad::NavStated this_status = pre_integ.Predict(start_status, gravity);
 
-        t = t + v * imu_time_span + 0.5 * gravity * imu_time_span * imu_time_span +
+        t = t + v * imu_time_span +
+            0.5 * gravity * imu_time_span * imu_time_span +
             0.5 * (R * acce) * imu_time_span * imu_time_span;
         v = v + gravity * imu_time_span + (R * acce) * imu_time_span;
 
@@ -113,10 +120,14 @@ TEST(PREINTEGRATION_TEST, ACCELERATION_TEST) {
         EXPECT_NEAR(v[1], this_status.v_[1], 1e-2);
         EXPECT_NEAR(v[2], this_status.v_[2], 1e-2);
 
-        EXPECT_NEAR(R.unit_quaternion().x(), this_status.R_.unit_quaternion().x(), 1e-4);
-        EXPECT_NEAR(R.unit_quaternion().y(), this_status.R_.unit_quaternion().y(), 1e-4);
-        EXPECT_NEAR(R.unit_quaternion().z(), this_status.R_.unit_quaternion().z(), 1e-4);
-        EXPECT_NEAR(R.unit_quaternion().w(), this_status.R_.unit_quaternion().w(), 1e-4);
+        EXPECT_NEAR(R.unit_quaternion().x(),
+                    this_status.R_.unit_quaternion().x(), 1e-4);
+        EXPECT_NEAR(R.unit_quaternion().y(),
+                    this_status.R_.unit_quaternion().y(), 1e-4);
+        EXPECT_NEAR(R.unit_quaternion().z(),
+                    this_status.R_.unit_quaternion().z(), 1e-4);
+        EXPECT_NEAR(R.unit_quaternion().w(),
+                    this_status.R_.unit_quaternion().w(), 1e-4);
     }
 
     end_status = pre_integ.Predict(start_status);
@@ -132,8 +143,10 @@ TEST(PREINTEGRATION_TEST, ACCELERATION_TEST) {
     SUCCEED();
 }
 
-void Optimize(sad::NavStated& last_state, sad::NavStated& this_state, sad::GNSS& last_gnss, sad::GNSS& this_gnss,
-              std::shared_ptr<sad::IMUPreintegration>& preinteg, const Vec3d& grav);
+void Optimize(sad::NavStated& last_state, sad::NavStated& this_state,
+              sad::GNSS& last_gnss, sad::GNSS& this_gnss,
+              std::shared_ptr<sad::IMUPreintegration>& preinteg,
+              const Vec3d& grav);
 
 /// 使用ESKF的Predict, Update来验证预积分的优化过程
 TEST(PREINTEGRATION_TEST, ESKF_TEST) {
@@ -148,7 +161,7 @@ TEST(PREINTEGRATION_TEST, ESKF_TEST) {
     sad::TxtIO io(FLAGS_txt_path);
     Vec2d antenna_pos(FLAGS_antenna_pox_x, FLAGS_antenna_pox_y);
 
-    std::ofstream fout("./data/ch3/gins.txt");
+    std::ofstream fout("../data/ch3/gins.txt");
     bool imu_inited = false, gnss_inited = false;
 
     /// 设置各类回调函数
@@ -177,7 +190,9 @@ TEST(PREINTEGRATION_TEST, ESKF_TEST) {
               // 噪声由初始化器估计
               options.gyro_var_ = sqrt(imu_init.GetCovGyro()[0]);
               options.acce_var_ = sqrt(imu_init.GetCovAcce()[0]);
-              eskf.SetInitialConditions(options, imu_init.GetInitBg(), imu_init.GetInitBa(), imu_init.GetGravity());
+              eskf.SetInitialConditions(options, imu_init.GetInitBg(),
+                                        imu_init.GetInitBa(),
+                                        imu_init.GetGravity());
 
               imu_inited = true;
               return;
@@ -196,13 +211,19 @@ TEST(PREINTEGRATION_TEST, ESKF_TEST) {
               preinteg->Integrate(imu, imu.timestamp_ - current_time);
 
               if (last_state_set) {
-                  auto pred_of_preinteg = preinteg->Predict(last_state, eskf.GetGravity());
+                  auto pred_of_preinteg =
+                      preinteg->Predict(last_state, eskf.GetGravity());
                   auto pred_of_eskf = eskf.GetNominalState();
 
                   /// 这两个预测值的误差应该非常接近
-                  EXPECT_NEAR((pred_of_preinteg.p_ - pred_of_eskf.p_).norm(), 0, 1e-2);
-                  EXPECT_NEAR((pred_of_preinteg.R_.inverse() * pred_of_eskf.R_).log().norm(), 0, 1e-2);
-                  EXPECT_NEAR((pred_of_preinteg.v_ - pred_of_eskf.v_).norm(), 0, 1e-2);
+                  EXPECT_NEAR((pred_of_preinteg.p_ - pred_of_eskf.p_).norm(), 0,
+                              1e-2);
+                  EXPECT_NEAR((pred_of_preinteg.R_.inverse() * pred_of_eskf.R_)
+                                  .log()
+                                  .norm(),
+                              0, 1e-2);
+                  EXPECT_NEAR((pred_of_preinteg.v_ - pred_of_eskf.v_).norm(), 0,
+                              1e-2);
               }
           }
       })
@@ -213,7 +234,9 @@ TEST(PREINTEGRATION_TEST, ESKF_TEST) {
             }
 
             sad::GNSS gnss_convert = gnss;
-            if (!sad::ConvertGps2UTM(gnss_convert, antenna_pos, FLAGS_antenna_angle) || !gnss_convert.heading_valid_) {
+            if (!sad::ConvertGps2UTM(gnss_convert, antenna_pos,
+                                     FLAGS_antenna_angle) ||
+                !gnss_convert.heading_valid_) {
                 return;
             }
 
@@ -236,10 +259,12 @@ TEST(PREINTEGRATION_TEST, ESKF_TEST) {
                 LOG(INFO) << "state before eskf update: " << state_bef_update;
                 LOG(INFO) << "state after  eskf update: " << update_state;
 
-                auto state_pred = preinteg->Predict(last_state, eskf.GetGravity());
+                auto state_pred =
+                    preinteg->Predict(last_state, eskf.GetGravity());
                 LOG(INFO) << "state in pred: " << state_pred;
 
-                Optimize(last_state, update_state, last_gnss, gnss_convert, preinteg, eskf.GetGravity());
+                Optimize(last_state, update_state, last_gnss, gnss_convert,
+                         preinteg, eskf.GetGravity());
             }
 
             last_state = eskf.GetNominalState();
@@ -255,14 +280,17 @@ TEST(PREINTEGRATION_TEST, ESKF_TEST) {
             last_gnss = gnss_convert;
             last_gnss_set = true;
         })
-        .SetOdomProcessFunc([&](const sad::Odom& odom) { imu_init.AddOdom(odom); })
+        .SetOdomProcessFunc(
+            [&](const sad::Odom& odom) { imu_init.AddOdom(odom); })
         .Go();
 
     SUCCEED();
 }
 
-void Optimize(sad::NavStated& last_state, sad::NavStated& this_state, sad::GNSS& last_gnss, sad::GNSS& this_gnss,
-              std::shared_ptr<sad::IMUPreintegration>& pre_integ, const Vec3d& grav) {
+void Optimize(sad::NavStated& last_state, sad::NavStated& this_state,
+              sad::GNSS& last_gnss, sad::GNSS& this_gnss,
+              std::shared_ptr<sad::IMUPreintegration>& pre_integ,
+              const Vec3d& grav) {
     assert(pre_integ != nullptr);
 
     if (pre_integ->dt_ < 1e-3) {
@@ -271,10 +299,12 @@ void Optimize(sad::NavStated& last_state, sad::NavStated& this_state, sad::GNSS&
     }
 
     using BlockSolverType = g2o::BlockSolverX;
-    using LinearSolverType = g2o::LinearSolverEigen<BlockSolverType::PoseMatrixType>;
+    using LinearSolverType =
+        g2o::LinearSolverEigen<BlockSolverType::PoseMatrixType>;
 
     auto* solver = new g2o::OptimizationAlgorithmGaussNewton(
-        g2o::make_unique<BlockSolverType>(g2o::make_unique<LinearSolverType>()));
+        g2o::make_unique<BlockSolverType>(
+            g2o::make_unique<LinearSolverType>()));
     g2o::SparseOptimizer optimizer;
     optimizer.setAlgorithm(solver);
 
@@ -374,16 +404,22 @@ void Optimize(sad::NavStated& last_state, sad::NavStated& this_state, sad::GNSS&
     optimizer.initializeOptimization();
     optimizer.optimize(10);
 
-    sad::NavStated corr_state(this_state.timestamp_, v1_pose->estimate().so3(), v1_pose->estimate().translation(),
-                              v1_vel->estimate(), v1_bg->estimate(), v1_ba->estimate());
+    sad::NavStated corr_state(this_state.timestamp_, v1_pose->estimate().so3(),
+                              v1_pose->estimate().translation(),
+                              v1_vel->estimate(), v1_bg->estimate(),
+                              v1_ba->estimate());
     LOG(INFO) << "corr state in opt: " << corr_state;
 
     // 获取结果，统计各类误差
     LOG(INFO) << "chi2/error: ";
-    LOG(INFO) << "preintegration: " << edge_inertial->chi2() << "/" << edge_inertial->error().transpose();
-    LOG(INFO) << "gnss0: " << edge_gnss0->chi2() << ", " << edge_gnss0->error().transpose();
-    LOG(INFO) << "gnss1: " << edge_gnss1->chi2() << ", " << edge_gnss1->error().transpose();
-    LOG(INFO) << "bias: " << edge_gyro_rw->chi2() << "/" << edge_acc_rw->error().transpose();
+    LOG(INFO) << "preintegration: " << edge_inertial->chi2() << "/"
+              << edge_inertial->error().transpose();
+    LOG(INFO) << "gnss0: " << edge_gnss0->chi2() << ", "
+              << edge_gnss0->error().transpose();
+    LOG(INFO) << "gnss1: " << edge_gnss1->chi2() << ", "
+              << edge_gnss1->error().transpose();
+    LOG(INFO) << "bias: " << edge_gyro_rw->chi2() << "/"
+              << edge_acc_rw->error().transpose();
 }
 
 int main(int argc, char** argv) {
