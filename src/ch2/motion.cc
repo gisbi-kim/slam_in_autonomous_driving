@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <thread>
+#include <utility>
 
 #include <gflags/gflags.h>
 #include <glog/logging.h>
@@ -14,11 +15,75 @@
 #include "tools/ui/pangolin_window.h"
 
 /// This section demonstrates a vehicle performing circular motion.
-/// The angular velocity and linear velocity of the vehicle can be set in the flags.
+/// The angular velocity and linear velocity of the vehicle can be set in the
+/// flags.
 
 DEFINE_double(angular_velocity, 10.0, "Angular velocity (in degrees)");
 DEFINE_double(linear_velocity, 5.0, "Linear velocity of the vehicle in m/s");
-DEFINE_bool(use_quaternion, false, "Whether to use quaternion calculation");
+DEFINE_double(dt_control_period_sec, 0.05,
+              "Linear velocity of the vehicle in sec");
+
+struct ControlInput {
+    Vec3d v_body{0.0, 0.0, 0.0};
+    Vec3d w_body{0.0, 0.0, 0.0};  // omega
+    double dt = 0.001;
+};
+
+class SE3Propagator {
+   public:
+    SE3Propagator() = default;
+    SE3Propagator(const SE3 pose_in) { pose = pose_in; }
+
+    std::pair<SE3, Vec3d> propagte(const ControlInput u) {
+        auto [pose_propagated, v_world] = _propagte_pos(pose, u.v_body, u.dt);
+        pose_propagated = _propagte_rot(pose_propagated, u.w_body, u.dt);
+
+        SetPose(pose_propagated);
+
+        return {pose_propagated, v_world};
+    }
+
+    void SetPose(const SE3 pose_in) { pose = pose_in; }
+
+    // Update ego position global (world)
+    std::pair<SE3, Vec3d> _propagte_pos(const SE3 pose_in, const Vec3d v_body,
+                                        const double dt) const {
+        SE3 pose{pose_in};
+        Vec3d v_world = pose.so3() * v_body;
+        pose.translation() += v_world * dt;
+        return {pose, v_world};
+    }
+
+    // Update ego orientation global (world)
+    SE3 _propagte_rot(const SE3 pose_in, const Vec3d omega,
+                      const double dt) const {
+        auto dq = [](const Vec3d wt) {
+            return Quatd(1.0, 0.5 * wt[0], 0.5 * wt[1], 0.5 * wt[2]);
+        };
+
+        SE3 pose{pose_in};
+        if (use_quaternion) {
+            // updated on the quat space
+            const auto& q_world_current = pose.unit_quaternion();
+            auto q_world_propagated = q_world_current * dq(omega * dt);
+            q_world_propagated.normalize();
+
+            // just re-representing: world quat to world SO3
+            pose.so3() = SO3(q_world_propagated);
+        } else {
+            // updated on the SO3 group space (dRot is calculated at its tangent
+            // space)
+            auto dR = SO3::exp(omega * dt);
+            pose.so3() = pose.so3() * dR;
+        }
+        return pose;
+    }
+
+   private:
+    SE3 pose;
+
+    const bool use_quaternion = false;
+};
 
 int main(int argc, char** argv) {
     google::InitGoogleLogging(argv[0]);
@@ -32,31 +97,25 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    const double angular_velocity_rad = FLAGS_angular_velocity * sad::math::kDEG2RAD;  // Angular velocity in radians
-    const Vec3d omega(0, 0, angular_velocity_rad);                                     // Angular velocity vector
-    const Vec3d v_body(FLAGS_linear_velocity, 0, 0);                                   // Body-frame velocity
-    const double dt = 0.5;                                                             // Time for each update
-
-    SE3 pose;  // Pose represented by TWB (B: body, W: world)
+    SE3Propagator pose_propagator;
     while (!ui.ShouldQuit()) {
-        // Update ego position global
-        Vec3d v_world = pose.so3() * v_body;
-        pose.translation() += v_world * dt;
+        // This turn's control (in this case, constant velocity model)
+        ControlInput u{
+            .v_body = Vec3d(FLAGS_linear_velocity, 0.0, 0.0),  // v
+            .w_body =
+                Vec3d(0, 0, FLAGS_angular_velocity * sad::math::kDEG2RAD),  // w
+            .dt = FLAGS_dt_control_period_sec};
 
-        // Update ego orientation global
-        if (FLAGS_use_quaternion) {
-            auto dq = Quatd(1, 0.5 * omega[0] * dt, 0.5 * omega[1] * dt, 0.5 * omega[2] * dt);
-            auto q = pose.unit_quaternion() * dq;
-            q.normalize();
-            pose.so3() = SO3(q);
-        } else {
-            pose.so3() = pose.so3() * SO3::exp(omega * dt);
-        }
+        // Update the pose using the single control input
+        auto [pose_world, v_world] = pose_propagator.propagte(u);
 
-        LOG(INFO) << "pose: " << pose.translation().transpose();
-        ui.UpdateNavState(sad::NavStated(0, pose, v_world));
+        // Redraw and print
+        ui.UpdateNavState(sad::NavStated(0, pose_world, v_world));
+        LOG(INFO) << "pose: " << pose_world.translation().transpose();
 
-        const std::chrono::microseconds sleepTime(static_cast<long long>(dt * 1e6));
+        // Sleep during a single control tick
+        const std::chrono::microseconds sleepTime(
+            static_cast<long long>(FLAGS_dt_control_period_sec * 1e6));
         std::this_thread::sleep_for(sleepTime);
     }
 
