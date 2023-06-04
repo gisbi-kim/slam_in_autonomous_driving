@@ -314,6 +314,8 @@ bool ESKF<S>::ObserveGps(const GNSS& gnss) {
                options_.gnss_ang_noise_);
     current_time_ = gnss.unix_time_;
 
+    LOG(INFO) << "GNSS-based measurement updated.";
+
     return true;
 }
 

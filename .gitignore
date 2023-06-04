@@ -51,8 +51,10 @@ data/ch7/**.pcd
 
 data/ch9/**.pcd
 data/ch3/state.txt
-data/ch3/gins.txt
+data/ch3/gins*
 data/ch3/gnss_output.txt
+data/ch3/10_*
+data/ch3/gnss_output*
 data/ch4/gins_preintg.txt
 
 .vscode/

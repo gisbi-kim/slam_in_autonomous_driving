@@ -21,7 +21,7 @@ DEFINE_double(antenna_angle, 12.06,
 DEFINE_double(antenna_pox_x, -0.17, "RTK antenna installation offset in X");
 DEFINE_double(antenna_pox_y, -0.20, "RTK antenna installation offset in Y");
 DEFINE_bool(with_ui, true, "Whether to display the graphical interface");
-DEFINE_bool(with_odom, false, "Whether to include odometry information");
+DEFINE_bool(with_odom, true, "Whether to include odometry information");
 
 /**
  * This program demonstrates the use of RTK+IMU for integrated navigation.
