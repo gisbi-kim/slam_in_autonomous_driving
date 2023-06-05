@@ -3,6 +3,11 @@
 - Translate the comments into English.
 - Test on my own Ubuntu 20.04 machine.
 
+### Progress 
+- Refactored code: [Ch2](https://github.com/gisbi-kim/slam_in_autonomous_driving_en/blob/master/src/ch2/motion.cc)
+- English-translated comments: [Ch2](https://github.com/gisbi-kim/slam_in_autonomous_driving_en/blob/master/src/ch2/motion.cc), [Ch3](https://github.com/gisbi-kim/slam_in_autonomous_driving_en/blob/master/src/ch3/eskf.hpp)
+- Tutorial videos: [Ch2 (youtube)](https://youtu.be/v4rsN_5y5y0) 
+
 ## SLAM in Autonomous Driving book (SAD book)
 
 This book systematically introduces inertial navigation, integrated navigation, laser mapping, laser positioning, laser inertial odometer and other knowledge to readers. This warehouse is the source code warehouse corresponding to the book and can be used publicly.
